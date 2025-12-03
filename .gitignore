@@ -1,0 +1,65 @@
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/app/firebase_credentials.json
+/storage/pail
+/vendor
+Homestead.json
+Homestead.yaml
+Thumbs.db
+
+
+# Laravel específico
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.idea
+/.vscode
+
+# Firebase credenciales - MUY IMPORTANTE
+firebase-credentials.json
+serviceAccountKey.json
+firebase-adminsdk*.json
+google-credentials.json
+/config/firebase.json
+
+# Archivos de configuración sensibles
+/config/services.php.backup
+/storage/app/firebase/
+
+# Logs
+*.log
+/storage/logs/*.log
+
+# Cache y temporales
+/bootstrap/cache/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
