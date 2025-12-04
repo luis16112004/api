@@ -1,34 +1,22 @@
-# Usamos la imagen oficial
 FROM php:8.2-cli
 
-# 1. TRUCO DE VELOCIDAD:
-# Descargamos un script mágico que instala extensiones ya compiladas
+# EL SECRETO DE VELOCIDAD: Script para instalar extensiones ya listas
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
-# 2. Instalamos las librerías del sistema y extensiones de PHP en un solo paso
-# Agregamos: zip (para composer), grpc (para firebase), bcmath (cálculos), intl (útil)
+# Instalar librerías del sistema y extensiones (zip, grpc, bcmath, intl) en UN solo paso
 RUN install-php-extensions zip grpc bcmath intl
 
-# 3. Instalamos utilidades básicas (git y unzip son obligatorios para Composer)
-RUN apt-get update && apt-get install -y \
-    git \
-    unzip
+# Instalar git y unzip
+RUN apt-get update && apt-get install -y git unzip
 
-# 4. Instalamos Composer
+# Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Definimos carpeta de trabajo
 WORKDIR /app
-
-# Copiamos archivos
 COPY . .
 
-# 5. Instalamos dependencias de Laravel
-# Nota: --ignore-platform-reqs ayuda a evitar errores falsos de versiones
+# Instalar dependencias
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
-# Exponemos puerto
 EXPOSE 10000
-
-# Comando de inicio
 CMD php artisan serve --host 0.0.0.0 --port 10000
