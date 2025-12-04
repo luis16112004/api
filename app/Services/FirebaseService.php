@@ -16,7 +16,12 @@ class FirebaseService
 
     public function __construct()
     {
-        $keyFilePath = storage_path('app/firebase_credentials.json');
+        // ANTES:
+// $keyFilePath = storage_path('app/firebase_credentials.json');
+
+// AHORA (Copia y pega esto):
+        $keyFilePath = env('FIREBASE_CREDENTIALS_PATH', storage_path('app/firebase_credentials.json'));
+        #$keyFilePath = storage_path('app/firebase_credentials.json');
         
         if (!file_exists($keyFilePath)) {
             Log::error('Firebase credentials file not found at: ' . $keyFilePath);

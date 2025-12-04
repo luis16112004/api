@@ -23,25 +23,25 @@ class ProviderController extends Controller
     public function index(Request $request)
     {
         try {
-            // Si el usuario está autenticado, filtrar por userId
+            // If the user is authenticated, filter by userId
             $userId = null;
             if ($request->user()) {
-                // Opcional: solo mostrar proveedores del usuario actual
+                // Optional: only show providers for the current user
                 // $userId = $request->user()->id;
             }
             
             $providers = $this->firebaseService->getProviders($userId);
             
-            Log::info('Providers listados', ['count' => count($providers)]);
+            Log::info('Providers listed', ['count' => count($providers)]);
             
             return response()->json([
-                'message' => 'Proveedores obtenidos exitosamente',
+                'message' => 'Providers retrieved successfully',
                 'data' => $providers,
             ]);
         } catch (\Exception $e) {
-            Log::error('Error en index: ' . $e->getMessage());
+            Log::error('Error in index: ' . $e->getMessage());
             return response()->json([
-                'error' => 'Error al obtener proveedores',
+                'error' => 'Error retrieving providers',
                 'message' => $e->getMessage()
             ], 500);
         }
@@ -53,7 +53,7 @@ class ProviderController extends Controller
      */
     public function store(Request $request)
     {
-        Log::info('Creando provider', $request->all());
+        Log::info('Creating provider', $request->all());
         
         $data = $request->all();
         $mappedData = [
@@ -69,18 +69,27 @@ class ProviderController extends Controller
             'userId' => $data['userId'] ?? $data['user_id'] ?? null,
         ];
 
+        // Custom messages to match visual validations
+        $messages = [
+            'companyName.min' => 'Name must be greater than 2 characters',
+            'contactName.min' => 'Name must be greater than 2 characters',
+            'phoneNumber.digits' => 'Phone number must be exactly 10 digits',
+            'address.min' => 'Address must have at least 5 characters',
+            'postalCode.regex' => 'Postal code must contain only numbers',
+        ];
+
         $validator = Validator::make($mappedData, [
-            'companyName' => 'required|string|max:255',
-            'contactName' => 'required|string|max:255',
+            'companyName' => 'required|string|min:3|max:255', // > 2 chars
+            'contactName' => 'required|string|min:3|max:255', // > 2 chars
             'email' => 'required|email|max:255',
-            'phoneNumber' => 'required|string|max:20',
-            'address' => 'required|string|max:255',
+            'phoneNumber' => 'required|numeric|digits:10', // exactly 10 digits
+            'address' => 'required|string|min:5|max:255', // at least 5 chars
             'city' => 'required|string|max:100',
             'state' => 'required|string|max:100',
-            'postalCode' => 'required|string|max:10',
+            'postalCode' => 'required|string|regex:/^[0-9]+$/|max:10', // Only numbers
             'country' => 'required|string|max:100',
             'userId' => 'nullable',
-        ]);
+        ], $messages);
 
         if ($validator->fails()) {
             Log::warning('Validation failed', $validator->errors()->toArray());
@@ -91,23 +100,23 @@ class ProviderController extends Controller
         }
 
         try {
-            // Si no se envía userId, usar el del usuario autenticado
+            // If userId is not sent, use the authenticated user's ID
             if (empty($mappedData['userId']) && $request->user()) {
                 $mappedData['userId'] = $request->user()->id;
             }
             
             $provider = $this->firebaseService->createProvider($mappedData);
 
-            Log::info('Provider creado', ['id' => $provider['id']]);
+            Log::info('Provider created', ['id' => $provider['id']]);
 
             return response()->json([
-                'message' => 'Proveedor creado exitosamente',
+                'message' => 'Provider created successfully',
                 'data' => $provider,
             ], 201);
         } catch (\Exception $e) {
-            Log::error('Error en store: ' . $e->getMessage());
+            Log::error('Error in store: ' . $e->getMessage());
             return response()->json([
-                'error' => 'Error al crear proveedor',
+                'error' => 'Error creating provider',
                 'message' => $e->getMessage()
             ], 500);
         }
@@ -124,20 +133,20 @@ class ProviderController extends Controller
 
             if (!$provider) {
                 return response()->json([
-                    'error' => 'Proveedor no encontrado'
+                    'error' => 'Provider not found'
                 ], 404);
             }
 
-            Log::info('Provider obtenido', ['id' => $id]);
+            Log::info('Provider retrieved', ['id' => $id]);
 
             return response()->json([
-                'message' => 'Proveedor obtenido exitosamente',
+                'message' => 'Provider retrieved successfully',
                 'data' => $provider,
             ]);
         } catch (\Exception $e) {
-            Log::error('Error obteniendo provider', ['id' => $id, 'error' => $e->getMessage()]);
+            Log::error('Error retrieving provider', ['id' => $id, 'error' => $e->getMessage()]);
             return response()->json([
-                'error' => 'Error al obtener proveedor',
+                'error' => 'Error retrieving provider',
                 'message' => $e->getMessage()
             ], 500);
         }
@@ -149,7 +158,7 @@ class ProviderController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        Log::info('Actualizando provider', ['id' => $id, 'data' => $request->all()]);
+        Log::info('Updating provider', ['id' => $id, 'data' => $request->all()]);
         
         $data = $request->all();
         $mappedData = [
@@ -168,18 +177,27 @@ class ProviderController extends Controller
         // Filter out nulls to allow partial updates
         $mappedData = array_filter($mappedData, function($value) { return !is_null($value); });
 
+        // Custom messages for update as well
+        $messages = [
+            'companyName.min' => 'Name must be greater than 2 characters',
+            'contactName.min' => 'Name must be greater than 2 characters',
+            'phoneNumber.digits' => 'Phone number must be exactly 10 digits',
+            'address.min' => 'Address must have at least 5 characters',
+            'postalCode.regex' => 'Postal code must contain only numbers',
+        ];
+
         $validator = Validator::make($mappedData, [
-            'companyName' => 'sometimes|required|string|max:255',
-            'contactName' => 'sometimes|required|string|max:255',
+            'companyName' => 'sometimes|required|string|min:3|max:255',
+            'contactName' => 'sometimes|required|string|min:3|max:255',
             'email' => 'sometimes|required|email|max:255',
-            'phoneNumber' => 'sometimes|required|string|max:20',
-            'address' => 'sometimes|required|string|max:255',
+            'phoneNumber' => 'sometimes|required|numeric|digits:10',
+            'address' => 'sometimes|required|string|min:5|max:255',
             'city' => 'sometimes|required|string|max:100',
             'state' => 'sometimes|required|string|max:100',
-            'postalCode' => 'sometimes|required|string|max:10',
+            'postalCode' => 'sometimes|required|string|regex:/^[0-9]+$/|max:10',
             'country' => 'sometimes|required|string|max:100',
             'userId' => 'sometimes|nullable',
-        ]);
+        ], $messages);
 
         if ($validator->fails()) {
             Log::warning('Validation failed', $validator->errors()->toArray());
@@ -192,16 +210,16 @@ class ProviderController extends Controller
         try {
             $provider = $this->firebaseService->updateProvider($id, $mappedData);
 
-            Log::info('Provider actualizado', ['id' => $id]);
+            Log::info('Provider updated', ['id' => $id]);
 
             return response()->json([
-                'message' => 'Proveedor actualizado exitosamente',
+                'message' => 'Provider updated successfully',
                 'data' => $provider,
             ]);
         } catch (\Exception $e) {
-            Log::error('Error actualizando provider', ['id' => $id, 'error' => $e->getMessage()]);
+            Log::error('Error updating provider', ['id' => $id, 'error' => $e->getMessage()]);
             return response()->json([
-                'error' => 'Error al actualizar proveedor',
+                'error' => 'Error updating provider',
                 'message' => $e->getMessage()
             ], 404);
         }
@@ -216,15 +234,15 @@ class ProviderController extends Controller
         try {
             $this->firebaseService->deleteProvider($id);
 
-            Log::info('Provider eliminado', ['id' => $id]);
+            Log::info('Provider deleted', ['id' => $id]);
 
             return response()->json([
-                'message' => 'Proveedor eliminado exitosamente',
+                'message' => 'Provider deleted successfully',
             ]);
         } catch (\Exception $e) {
-            Log::error('Error eliminando provider', ['id' => $id, 'error' => $e->getMessage()]);
+            Log::error('Error deleting provider', ['id' => $id, 'error' => $e->getMessage()]);
             return response()->json([
-                'error' => 'Error al eliminar proveedor',
+                'error' => 'Error deleting provider',
                 'message' => $e->getMessage()
             ], 404);
         }
