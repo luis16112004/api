@@ -55,7 +55,21 @@ class ProviderController extends Controller
     {
         Log::info('Creando provider', $request->all());
         
-        $validator = Validator::make($request->all(), [
+        $data = $request->all();
+        $mappedData = [
+            'companyName' => $data['companyName'] ?? $data['company_name'] ?? null,
+            'contactName' => $data['contactName'] ?? $data['contact_name'] ?? null,
+            'email' => $data['email'] ?? null,
+            'phoneNumber' => $data['phoneNumber'] ?? $data['phone_number'] ?? null,
+            'address' => $data['address'] ?? null,
+            'city' => $data['city'] ?? null,
+            'state' => $data['state'] ?? null,
+            'postalCode' => $data['postalCode'] ?? $data['postal_code'] ?? null,
+            'country' => $data['country'] ?? null,
+            'userId' => $data['userId'] ?? $data['user_id'] ?? null,
+        ];
+
+        $validator = Validator::make($mappedData, [
             'companyName' => 'required|string|max:255',
             'contactName' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -65,7 +79,7 @@ class ProviderController extends Controller
             'state' => 'required|string|max:100',
             'postalCode' => 'required|string|max:10',
             'country' => 'required|string|max:100',
-            'userId' => 'nullable', // Removed exists:users,id
+            'userId' => 'nullable',
         ]);
 
         if ($validator->fails()) {
@@ -78,12 +92,11 @@ class ProviderController extends Controller
 
         try {
             // Si no se envía userId, usar el del usuario autenticado
-            $data = $request->all();
-            if (!isset($data['userId']) && $request->user()) {
-                $data['userId'] = $request->user()->id;
+            if (empty($mappedData['userId']) && $request->user()) {
+                $mappedData['userId'] = $request->user()->id;
             }
             
-            $provider = $this->firebaseService->createProvider($data);
+            $provider = $this->firebaseService->createProvider($mappedData);
 
             Log::info('Provider creado', ['id' => $provider['id']]);
 
