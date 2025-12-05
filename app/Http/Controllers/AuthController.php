@@ -148,4 +148,124 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Cambiar contraseña
+     */
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|string|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'messages' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $token = $request->bearerToken();
+            if (!$token) {
+                return response()->json(['error' => 'Token not provided'], 401);
+            }
+            
+            $uid = $this->firebaseService->verifyToken($token);
+            if (!$uid) {
+                return response()->json(['error' => 'Invalid token'], 401);
+            }
+
+            $this->firebaseService->updateUserPassword($uid, $request->password);
+
+            return response()->json([
+                'message' => 'Contraseña actualizada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Change password error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Error al cambiar la contraseña',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar perfil (nombre)
+     */
+    public function updateProfile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'messages' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $token = $request->bearerToken();
+            $uid = $this->firebaseService->verifyToken($token);
+            if (!$uid) {
+                return response()->json(['error' => 'Invalid token'], 401);
+            }
+
+            $user = $this->firebaseService->updateUserProfile($uid, ['name' => $request->name]);
+
+            return response()->json([
+                'message' => 'Perfil actualizado exitosamente',
+                'user' => $user
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Update profile error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Error al actualizar perfil',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar cuenta
+     */
+    public function deleteAccount(Request $request)
+    {
+        // Validación de confirmación
+        $validator = Validator::make($request->all(), [
+            'confirmation' => 'required|in:eliminarcuenta',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'message' => 'Debes escribir "eliminarcuenta" para confirmar.'
+            ], 422);
+        }
+
+        try {
+            $token = $request->bearerToken();
+            $uid = $this->firebaseService->verifyToken($token);
+            if (!$uid) {
+                return response()->json(['error' => 'Invalid token'], 401);
+            }
+
+            $this->firebaseService->deleteUserAccount($uid);
+
+            return response()->json([
+                'message' => 'Cuenta eliminada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Delete account error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Error al eliminar cuenta',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

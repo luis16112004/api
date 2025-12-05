@@ -20,8 +20,8 @@ class FirebaseService
 // $keyFilePath = storage_path('app/firebase_credentials.json');
 
 // AHORA (Copia y pega esto):
-        $keyFilePath = env('FIREBASE_CREDENTIALS_PATH', storage_path('app/firebase_credentials.json'));
-        #$keyFilePath = storage_path('app/firebase_credentials.json');
+        #$keyFilePath = env('FIREBASE_CREDENTIALS_PATH', storage_path('app/firebase_credentials.json'));
+        $keyFilePath = storage_path('app/firebase_credentials.json');
         
         if (!file_exists($keyFilePath)) {
             Log::error('Firebase credentials file not found at: ' . $keyFilePath);
@@ -143,6 +143,60 @@ class FirebaseService
             return $this->normalizeData($data);
         }
         return null;
+    }
+
+    public function updateUserPassword(string $uid, string $newPassword)
+    {
+        try {
+            $this->auth->changeUserPassword($uid, $newPassword);
+        } catch (\Exception $e) {
+            throw new \Exception('Error updating password in Firebase Auth: ' . $e->getMessage());
+        }
+    }
+
+    public function updateUserProfile(string $uid, array $data)
+    {
+        // 1. Update Auth Profile (DisplayName) if provided
+        if (isset($data['name'])) {
+            try {
+                $this->auth->updateUser($uid, ['displayName' => $data['name']]);
+            } catch (\Exception $e) {
+                throw new \Exception('Error updating user profile in Firebase Auth: ' . $e->getMessage());
+            }
+        }
+
+        // 2. Update Firestore Document
+        $updateData = [];
+        if (isset($data['name'])) {
+            $updateData['name'] = $data['name'];
+        }
+        // Add other fields here if needed in the future
+
+        if (!empty($updateData)) {
+            $updateData['updatedAt'] = new \DateTime();
+            $this->db->collection('users')->document($uid)->set($updateData, ['merge' => true]);
+        }
+        
+        return $this->findUserById($uid);
+    }
+
+    public function deleteUserAccount(string $uid)
+    {
+        // 1. Delete from Firebase Auth
+        try {
+            $this->auth->deleteUser($uid);
+        } catch (\Exception $e) {
+            throw new \Exception('Error deleting user from Firebase Auth: ' . $e->getMessage());
+        }
+
+        // 2. Delete from Firestore
+        $this->db->collection('users')->document($uid)->delete();
+
+        // 3. Optional: Delete all tokens for this user
+        $tokens = $this->db->collection('personal_access_tokens')->where('user_id', '=', $uid)->documents();
+        foreach ($tokens as $token) {
+            $token->reference()->delete();
+        }
     }
 
     // --- Helper ---
