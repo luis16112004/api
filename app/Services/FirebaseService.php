@@ -12,20 +12,34 @@ class FirebaseService
     protected $apiKey;
     public function __construct()
     {
-        $keyFilePath = storage_path('app/firebase_credentials.json');
+        // 1. Intentar leer desde Variable de Entorno (Ideal para Railway)
+        $credentialsJson = env('FIREBASE_CREDENTIALS_JSON');
         
-        if (!file_exists($keyFilePath)) {
-            Log::error('Firebase credentials file not found at: ' . $keyFilePath);
-            throw new \Exception('Firebase credentials not found');
+        $credentials = null;
+
+        if (!empty($credentialsJson)) {
+            // Si existe la variable, la usamos decodificándola
+            $credentials = json_decode($credentialsJson, true);
+        } else {
+            // 2. Si no hay variable, buscamos el archivo (Ideal para Local)
+            $keyFilePath = storage_path('app/firebase_credentials.json');
+            if (file_exists($keyFilePath)) {
+                $credentials = json_decode(file_get_contents($keyFilePath), true);
+            }
+        }
+
+        if (!$credentials) {
+            Log::error('Firebase credentials not found in ENV or File.');
+            throw new \Exception('Firebase credentials not found. Please set FIREBASE_CREDENTIALS_JSON in Railway variables.');
         }
 
         // Initialize Firestore
         $this->db = new FirestoreClient([
-            'keyFilePath' => $keyFilePath
+            'keyFile' => $credentials  // Usamos 'keyFile' que acepta array
         ]);
 
         // Initialize Firebase Auth (Admin SDK)
-        $factory = (new Factory)->withServiceAccount($keyFilePath);
+        $factory = (new Factory)->withServiceAccount($credentials);
         $this->auth = $factory->createAuth();
 
         // Get Web API Key from env
